@@ -1218,6 +1218,13 @@ const Type* PhiNode::Value(PhaseGVN* phase) const {
   if( phase->type_or_null(r) == Type::TOP )  // Dead code?
     return Type::TOP;
 
+  // The value lattice of a live memory Phi cannot become more precise than
+  // Type::MEMORY; its alias precision is carried separately by _adr_type.
+  // Return the constant result directly instead of merging the input types.
+  if (_type == Type::MEMORY) {
+    return Type::MEMORY;
+  }
+
   // Check for trip-counted loop.  If so, be smarter.
   BaseCountedLoopNode* l = r->is_BaseCountedLoop() ? r->as_BaseCountedLoop() : nullptr;
   if (l && ((const Node*)l->phi() == this)) { // Trip counted loop!
