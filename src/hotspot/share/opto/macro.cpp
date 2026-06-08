@@ -164,6 +164,12 @@ static Node *scan_mem_chain(Node *mem, int alias_idx, int offset, Node *start_me
     if (mem == alloc_mem || mem == start_mem ) {
       return mem;  // hit one of our sentinels
     } else if (mem->is_MergeMem()) {
+      // A sparse EA MergeMem resolves an absent known-instance slice to the
+      // matching general slice. EA materialized an explicit instance slice
+      // wherever instance memory actually flows (see ConnectionGraph::
+      // materialize_instance_slices_at_safepoints), so an absent slice means
+      // there is nothing to find along this chain and the general fallback
+      // walk below reaches the same default state.
       mem = mem->as_MergeMem()->memory_at(alias_idx);
     } else if (mem->is_Proj() && mem->as_Proj()->_con == TypeFunc::Memory) {
       Node *in = mem->in(0);
@@ -209,7 +215,26 @@ static Node *scan_mem_chain(Node *mem, int alias_idx, int offset, Node *start_me
           return mem;
         }
       } else {
-        assert(adr_idx == Compile::AliasIdxRaw, "address must match or be raw");
+        // The slice alias did not match. It can still be the desired store if
+        // its address folds to this allocation and offset; non-raw stores with
+        // a provable field offset access exactly that field.
+        intptr_t store_offset = Type::OffsetBot;
+        AllocateNode* store_alloc = AllocateNode::Ideal_allocation(mem->in(MemNode::Address), phase, store_offset);
+        if (store_alloc == alloc && store_offset == offset && atype->isa_oopptr() != nullptr) {
+          return mem;
+        }
+        if (store_alloc == alloc && (store_offset == Type::OffsetBot || store_offset == Type::OffsetTop)) {
+          // The store targets this allocation but not a provable field offset;
+          // scalar replacement cannot recover a reliable field value.
+          return nullptr;
+        }
+        // A sparse MergeMem may route an unset known-instance slice to the
+        // matching general slice. In that case, keep walking over stores that
+        // cannot update the non-escaping allocation, as EA does when searching
+        // for instance memory.
+        assert(adr_idx == Compile::AliasIdxRaw ||
+               (tinst != nullptr && tinst->is_known_instance()),
+               "address must match or be raw unless scanning known-instance memory");
       }
       mem = mem->in(MemNode::Memory);
     } else if (mem->is_ClearArray()) {
@@ -438,6 +463,11 @@ Node *PhaseMacroExpand::value_from_mem_phi(Node *mem, BasicType ft, const Type *
         values.at_put(j, _igvn.zerocon(ft));
         continue;
       }
+      if (val == nullptr) {
+        // A sparse general-slice walk may find an ambiguous store. Bail out of
+        // this scalar object instead of synthesizing an unsafe value Phi input.
+        return nullptr;  // can't find a value on this path
+      }
       if (val->is_Initialize()) {
         val = val->as_Initialize()->find_captured_store(offset, type2aelembytes(ft), &_igvn);
       }
@@ -496,6 +526,16 @@ Node *PhaseMacroExpand::value_from_mem_phi(Node *mem, BasicType ft, const Type *
   return phi;
 }
 
+#ifdef ASSERT
+static bool is_store_to_instance_field(Node* store, Node* alloc, int offset, PhaseGVN* phase) {
+  // Sparse memory walks may encounter a store through a general slice. Recheck
+  // the address expression to prove that the store really targets this object.
+  intptr_t store_offset = Type::OffsetBot;
+  AllocateNode* store_alloc = AllocateNode::Ideal_allocation(store->in(MemNode::Address), phase, store_offset);
+  return store_alloc == alloc && store_offset == offset;
+}
+#endif
+
 // Search the last value stored into the object's field.
 Node* PhaseMacroExpand::value_from_mem(Node* origin, Node* ctl, BasicType ft, const Type* ftype, const TypeOopPtr* adr_t, AllocateNode* alloc) {
   assert(adr_t->is_known_instance_field(), "instance required");
@@ -518,7 +558,9 @@ Node* PhaseMacroExpand::value_from_mem(Node* origin, Node* ctl, BasicType ft, co
       return nullptr;  // found a loop, give up
     }
     mem = scan_mem_chain(mem, alias_idx, offset, start_mem, alloc, &_igvn);
-    if (mem == start_mem || mem == alloc_mem) {
+    if (mem == nullptr) {
+      return nullptr; // can't find a value
+    } else if (mem == start_mem || mem == alloc_mem) {
       done = true;  // hit a sentinel, return appropriate 0 value
     } else if (mem->is_Initialize()) {
       mem = mem->as_Initialize()->find_captured_store(offset, type2aelembytes(ft), &_igvn);
@@ -532,17 +574,26 @@ Node* PhaseMacroExpand::value_from_mem(Node* origin, Node* ctl, BasicType ft, co
     } else if (mem->is_Store()) {
       const TypeOopPtr* atype = mem->as_Store()->adr_type()->isa_oopptr();
       assert(atype != nullptr, "address type must be oopptr");
-      assert(C->get_alias_index(atype) == alias_idx &&
-             atype->is_known_instance_field() && atype->offset() == offset &&
-             atype->instance_id() == instance_id, "store is correct memory slice");
+      assert((C->get_alias_index(atype) == alias_idx &&
+              atype->is_known_instance_field() && atype->offset() == offset &&
+              atype->instance_id() == instance_id) ||
+             is_store_to_instance_field(mem, alloc, offset, &_igvn),
+             "store is correct memory slice");
       done = true;
     } else if (mem->is_Phi()) {
-      // try to find a phi's unique input
+      // Try to find a phi's unique input. This is only legal if every live
+      // input either reaches the same value or is a self reference. If an
+      // input cannot prove a value, using a value from another input could
+      // make a branch-local value visible at the phi's region.
       Node *unique_input = nullptr;
       Node *top = C->top();
+      bool has_unknown_input = false;
       for (uint i = 1; i < mem->req(); i++) {
         Node *n = scan_mem_chain(mem->in(i), alias_idx, offset, start_mem, alloc, &_igvn);
-        if (n == nullptr || n == top || n == mem) {
+        if (n == nullptr) {
+          has_unknown_input = true;
+          break;
+        } else if (n == top || n == mem) {
           continue;
         } else if (unique_input == nullptr) {
           unique_input = n;
@@ -551,7 +602,7 @@ Node* PhaseMacroExpand::value_from_mem(Node* origin, Node* ctl, BasicType ft, co
           break;
         }
       }
-      if (unique_input != nullptr && unique_input != top) {
+      if (!has_unknown_input && unique_input != nullptr && unique_input != top) {
         mem = unique_input;
       } else {
         done = true;

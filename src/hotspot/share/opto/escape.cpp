@@ -3999,14 +3999,20 @@ PhiNode* ConnectionGraph::create_split_phi(PhiNode* orig_phi, int alias_idx, Uni
     return result;
   }
   // Previous check may fail when the same wide memory Phi was split into Phis
-  // for different memory slices. Search all Phis for this region.
+  // for different memory slices and _node_map only remembers the most recent
+  // split. Search the region for another split created from this same Phi.
   if (result != nullptr) {
     Node* region = orig_phi->in(0);
     for (DUIterator_Fast imax, i = region->fast_outs(imax); i < imax; i++) {
       Node* phi = region->fast_out(i);
+      // inst_mem_id records which original wide Phi was split to create this
+      // memory Phi, avoiding accidental reuse of unrelated Phis.
       if (phi->is_Phi() &&
+          phi->as_Phi()->type() == Type::MEMORY &&
+          phi->_idx >= nodes_size() &&
+          phi->as_Phi()->inst_mem_id() == (int)orig_phi->_idx &&
           C->get_alias_index(phi->as_Phi()->adr_type()) == alias_idx) {
-        assert(phi->_idx >= nodes_size(), "only new Phi per instance memory slice");
+        set_map(orig_phi, phi);
         return phi->as_Phi();
       }
     }
@@ -4023,6 +4029,9 @@ PhiNode* ConnectionGraph::create_split_phi(PhiNode* orig_phi, int alias_idx, Uni
   orig_phi_worklist.push(orig_phi);
   const TypePtr *atype = C->get_adr_type(alias_idx);
   result = PhiNode::make(orig_phi->in(0), nullptr, Type::MEMORY, atype);
+  // _node_map only caches one split per original Phi. Keep the origin on the
+  // Phi itself so later splits can find previously-created siblings.
+  result->set_inst_mem_id((int)orig_phi->_idx);
   C->copy_node_notes_to(result, orig_phi);
   igvn->set_type(result, result->bottom_type());
   record_for_optimizer(result);
@@ -4108,7 +4117,11 @@ Node* ConnectionGraph::step_through_mergemem(MergeMemNode *mmem, int alias_idx, 
       !(toop->isa_instptr() &&
         toop->is_instptr()->instance_klass()->is_java_lang_Object() &&
         toop->offset() == Type::OffsetBot)) {
-    mem = mmem->memory_at(alias_idx);
+    // Do not use MergeMemNode::memory_at() here: sparse EA MergeMems use it
+    // to resolve absent known-instance slices to their matching general slice.
+    // find_inst_mem() must observe the absent slice so it can search the
+    // general memory chain and lazily materialize the precise instance slice.
+    mem = mmem->memory_at_base(alias_idx);
     // Update input if it is progress over what we have now
   }
   return mem;
@@ -4125,12 +4138,22 @@ void ConnectionGraph::move_inst_mem(Node* n, Unique_Node_List& orig_phis) {
   int alias_idx = C->get_alias_index(tp);
   int general_idx = C->get_general_index(alias_idx);
 
-  // Move users first
+  // Move users first. When a sparse MergeMem observes n through a general
+  // slice, materialize the precise slice after the fast use iteration.
+  Unique_Node_List materialize_sparse_mergemems;
   for (DUIterator_Fast imax, i = n->fast_outs(imax); i < imax; i++) {
     Node* use = n->fast_out(i);
     if (use->is_MergeMem()) {
       MergeMemNode* mmem = use->as_MergeMem();
       assert(n == mmem->memory_at(alias_idx), "should be on instance memory slice");
+      if (alias_idx != general_idx &&
+          ((uint)alias_idx >= mmem->req() || mmem->is_empty_memory(mmem->in(alias_idx)))) {
+        // The store may be visible as the alias_idx memory only because sparse
+        // MergeMems fall back from an absent known-instance slice to the
+        // matching general slice. Materialize the instance slice after this
+        // fast output iteration so that no uses are added while iterating.
+        materialize_sparse_mergemems.push(mmem);
+      }
       if (n != mmem->memory_at(general_idx) || alias_idx == general_idx) {
         continue; // Nothing to do
       }
@@ -4181,6 +4204,15 @@ void ConnectionGraph::move_inst_mem(Node* n, Unique_Node_List& orig_phis) {
       use->dump();
       assert(false, "should not be here");
 #endif
+    }
+  }
+
+  // Delayed materialization avoids mutating n's use list while
+  // DUIterator_Fast is walking it.
+  for (uint i = 0; i < materialize_sparse_mergemems.size(); i++) {
+    MergeMemNode* mmem = materialize_sparse_mergemems.at(i)->as_MergeMem();
+    if ((uint)alias_idx >= mmem->req() || mmem->is_empty_memory(mmem->in(alias_idx))) {
+      mmem->set_memory_at(alias_idx, n);
     }
   }
 }
@@ -4248,8 +4280,7 @@ Node* ConnectionGraph::find_inst_mem(Node* orig_mem, int alias_idx, Unique_Node_
           result = proj_in->in(TypeFunc::Memory);
         } else if (C->get_alias_index(result->adr_type()) != alias_idx) {
           assert(C->get_general_index(alias_idx) == C->get_alias_index(result->adr_type()), "should be projection for the same field/array element");
-          result = get_map(result->_idx);
-          assert(result != nullptr, "new projection should have been allocated");
+          result = find_inst_mem_initialize_proj(result, alias_idx);
           break;
         }
       } else if (proj_in->is_MemBar()) {
@@ -4346,6 +4377,186 @@ Node* ConnectionGraph::find_inst_mem(Node* orig_mem, int alias_idx, Unique_Node_
   }
   // the result is either MemNode, PhiNode, InitializeNode.
   return result;
+}
+
+// Return or lazily create the narrow Initialize projection for alias_idx. Sparse
+// splitting no longer pre-creates every instance projection during EA setup.
+Node* ConnectionGraph::find_inst_mem_initialize_proj(Node* general_proj, int alias_idx) {
+  Node* result = get_map(general_proj->_idx);
+  if (result != nullptr) {
+    return result;
+  }
+  const TypePtr* adr_type = _compile->get_adr_type(alias_idx);
+  InitializeNode* init = general_proj->in(0)->as_Initialize();
+  NarrowMemProjNode* new_proj = init->narrow_mem_proj_or_null(adr_type);
+  if (new_proj == nullptr) {
+    // Initialize can legitimately have no projection for this instance slice
+    // until a later memory walk proves the slice is actually needed.
+    new_proj = new NarrowMemProjNode(init, adr_type);
+    _igvn->set_type(new_proj, new_proj->bottom_type());
+    record_for_optimizer(new_proj);
+  }
+  set_map(general_proj, new_proj);
+  return new_proj;
+}
+
+//
+// With sparse EA MergeMems, precise instance memory is no longer materialized
+// in every MergeMem. Scalar replacement, however, recovers field values during
+// macro expansion by walking the memory state of safepoints, and by that time
+// the memory edges of general slices have been rewritten to bypass
+// known-instance stores (Phase 4 and move_inst_mem()). Search for precise
+// instance memory now, while the original memory chains are still intact,
+// starting from every memory state that scalar replacement may later query:
+// safepoints which have a scalar replacement candidate (or a phi merging
+// candidates) among their debug values, and arraycopy nodes which copy a known
+// instance. find_inst_mem() materializes the instance slice in every MergeMem
+// it steps through and splits the memory phis it encounters, which is exactly
+// the memory that value recovery will consult.
+//
+// Only aliases with open (non-captured) stores need this: stores captured by
+// an Initialize use raw addresses and remain reachable through the Initialize
+// node, so general chain rewriting cannot hide them from value recovery.
+//
+void ConnectionGraph::materialize_instance_slices_at_safepoints(uint new_index_start,
+                                                                const VectorSet& open_instance_aliases,
+                                                                GrowableArray<ArrayCopyNode*>& arraycopy_worklist,
+                                                                Unique_Node_List& orig_phis) {
+  Compile* C = _compile;
+  PhaseIterGVN* igvn = _igvn;
+  const uint new_index_end = (uint) C->num_alias_types();
+  if (new_index_start >= new_index_end) {
+    return;
+  }
+
+  // Compact table of (instance id, alias index) pairs for the new instance
+  // aliases which are modified by open stores.
+  GrowableArray<uint> inst_ids;
+  GrowableArray<uint> inst_aliases;
+  for (uint ni = new_index_start; ni < new_index_end; ni++) {
+    if (!open_instance_aliases.test(ni)) {
+      continue;
+    }
+    const TypeOopPtr* tinst = C->get_adr_type(ni)->isa_oopptr();
+    if (tinst != nullptr && tinst->is_known_instance()) {
+      inst_ids.append((uint)tinst->instance_id());
+      inst_aliases.append(ni);
+    }
+  }
+  if (inst_ids.length() == 0) {
+    return; // The common case: all candidate fields are set by captured stores.
+  }
+
+  GrowableArray<uint> aliases;
+  auto collect_aliases_for = [&](uint instance_id) {
+    aliases.clear();
+    for (int k = 0; k < inst_ids.length(); k++) {
+      if (inst_ids.at(k) == instance_id) {
+        aliases.append(inst_aliases.at(k));
+      }
+    }
+  };
+
+  auto materialize_at = [&](Node* mem) {
+    if (mem == nullptr || mem->is_top()) {
+      return;
+    }
+    for (int k = 0; k < aliases.length(); k++) {
+      const uint ni = aliases.at(k);
+      if (mem->is_MergeMem()) {
+        MergeMemNode* mmem = mem->as_MergeMem();
+        if (ni < mmem->req() && !mmem->is_empty_memory(mmem->in(ni))) {
+          continue; // The instance slice is already explicit.
+        }
+      }
+      // If we have crossed the 3/4 point of max node limit it's too risky
+      // to continue with EA/SR because we might hit the max node limit.
+      if (C->live_nodes() >= C->max_node_limit() * 0.75) {
+        if (C->do_reduce_allocation_merges()) {
+          C->record_failure(C2Compiler::retry_no_reduce_allocation_merges());
+        } else if (_invocation > 0) {
+          C->record_failure(C2Compiler::retry_no_iterative_escape_analysis());
+        } else {
+          C->record_failure(C2Compiler::retry_no_escape_analysis());
+        }
+        return;
+      }
+      // The result is dropped: it stays reachable through the instance slices
+      // and split phis that find_inst_mem() attaches along the searched chain.
+      find_inst_mem(mem, (int)ni, orig_phis);
+      if (C->failing()) {
+        return;
+      }
+    }
+  };
+
+  // Process safepoints which may rematerialize a candidate allocation.
+  // Snapshot the size: nodes recorded by find_inst_mem() below are new memory
+  // nodes, never candidate casts.
+  const uint nodes = ideal_nodes.size();
+  Unique_Node_List flow;
+  Unique_Node_List mems;
+  for (uint i = 0; i < nodes; i++) {
+    Node* res = ideal_nodes.at(i);
+    if (!res->is_CheckCastPP()) {
+      continue;
+    }
+    const TypeOopPtr* t = igvn->type(res)->isa_oopptr();
+    if (t == nullptr || !t->is_known_instance()) {
+      continue;
+    }
+    collect_aliases_for((uint)t->instance_id());
+    if (aliases.length() == 0) {
+      continue; // No memory was attached to the instance's alias classes.
+    }
+    // Find the memory state of every safepoint which may refer to the
+    // allocation in its debug info, either directly or through casts, phis
+    // and SafePointScalarMerge nodes (reduced allocation merges).
+    flow.clear();
+    mems.clear();
+    flow.push(res);
+    for (uint next = 0; next < flow.size(); next++) {
+      Node* m = flow.at(next);
+      for (DUIterator_Fast jmax, j = m->fast_outs(jmax); j < jmax; j++) {
+        Node* use = m->fast_out(j);
+        if (use->is_Phi() || use->is_ConstraintCast() || use->is_SafePointScalarMerge() ||
+            use->is_EncodeNarrowPtr() || use->is_DecodeNarrowPtr()) {
+          flow.push(use);
+        } else if (use->is_SafePoint() && use->as_SafePoint()->jvms() != nullptr) {
+          Node* sfpt_mem = use->in(TypeFunc::Memory);
+          if (sfpt_mem != nullptr) {
+            mems.push(sfpt_mem);
+          }
+        }
+      }
+    }
+    for (uint next = 0; next < mems.size(); next++) {
+      materialize_at(mems.at(next));
+      if (C->failing()) {
+        return;
+      }
+    }
+  }
+
+  // Process arraycopy nodes which copy a known instance; scalar replacement
+  // may search their memory input for source element values. ArrayCopy nodes
+  // carrying a JVM state are usually already covered above as safepoint uses
+  // of the candidate's cast; this also covers nodes whose Src/Dest input is
+  // an AddP over the cast rather than the cast itself.
+  for (int i = 0; i < arraycopy_worklist.length(); i++) {
+    ArrayCopyNode* ac = arraycopy_worklist.at(i);
+    for (int which = 0; which < 2; which++) {
+      const TypeOopPtr* t = (which == 0) ? ac->_dest_type : ac->_src_type;
+      if (t == TypeOopPtr::BOTTOM || !t->is_known_instance()) {
+        continue;
+      }
+      collect_aliases_for((uint)t->instance_id());
+      materialize_at(ac->in(TypeFunc::Memory));
+      if (C->failing()) {
+        return;
+      }
+    }
+  }
 }
 
 //
@@ -4823,6 +5034,7 @@ void ConnectionGraph::split_unique_types(GrowableArray<Node *>  &alloc_worklist,
   if (memnode_worklist.size() == 0) {
     return;  // nothing to do
   }
+  VectorSet open_instance_aliases; // instance aliases with non-captured stores
   while (memnode_worklist.size() != 0) {
     Node *n = memnode_worklist.pop();
     if (visited.test_set(n->_idx)) {
@@ -4876,6 +5088,14 @@ void ConnectionGraph::split_unique_types(GrowableArray<Node *>  &alloc_worklist,
       assert (addr_t->isa_ptr() != nullptr, "pointer type required.");
       int alias_idx = _compile->get_alias_index(addr_t->is_ptr());
       assert ((uint)alias_idx < new_index_end, "wrong alias index");
+      if (!n->is_Load() && (uint)alias_idx >= new_index_start) {
+        // Track instance aliases modified by open (non-captured) stores. Only
+        // those can later be bypassed on general memory chains and therefore
+        // need explicit instance slices for scalar replacement value recovery.
+        // Stores captured by an Initialize use raw addresses and stay reachable
+        // through the Initialize node.
+        open_instance_aliases.set(alias_idx);
+      }
       Node *mem = find_inst_mem(n->in(MemNode::Memory), alias_idx, orig_phis);
       if (_compile->failing()) {
         return;
@@ -4945,6 +5165,9 @@ void ConnectionGraph::split_unique_types(GrowableArray<Node *>  &alloc_worklist,
   for( uint next = 0; next < length; ++next ) {
     MergeMemNode* nmm = mergemem_worklist.at(next);
     assert(!visited.test_set(nmm->_idx), "should not be visited before");
+    // From this point on, absent known-instance slices in this MergeMem should
+    // be read from the matching general slice instead of being materialized.
+    nmm->set_use_general_memory_for_unset_instance_slices();
     // Note: we don't want to use MergeMemStream here because we only want to
     // scan inputs which exist at the start, not ones we add during processing.
     // Note 2: MergeMem may already contains instance memory slices added
@@ -4977,34 +5200,6 @@ void ConnectionGraph::split_unique_types(GrowableArray<Node *>  &alloc_worklist,
         mem = mem->in(MemNode::Memory);
       }
       nmm->set_memory_at(i, (cur != nullptr) ? cur : mem);
-      // Find any instance of the current type if we haven't encountered
-      // already a memory slice of the instance along the memory chain.
-      for (uint ni = new_index_start; ni < new_index_end; ni++) {
-        if((uint)_compile->get_general_index(ni) == i) {
-          Node *m = (ni >= nmm->req()) ? nmm->empty_memory() : nmm->in(ni);
-          if (nmm->is_empty_memory(m)) {
-            Node* result = find_inst_mem(mem, ni, orig_phis);
-            if (_compile->failing()) {
-              return;
-            }
-            nmm->set_memory_at(ni, result);
-          }
-        }
-      }
-    }
-    // Find the rest of instances values
-    for (uint ni = new_index_start; ni < new_index_end; ni++) {
-      const TypeOopPtr *tinst = _compile->get_adr_type(ni)->isa_oopptr();
-      Node* result = step_through_mergemem(nmm, ni, tinst);
-      if (result == nmm->base_memory()) {
-        // Didn't find instance memory, search through general slice recursively.
-        result = nmm->memory_at(_compile->get_general_index(ni));
-        result = find_inst_mem(result, ni, orig_phis);
-        if (_compile->failing()) {
-          return;
-        }
-        nmm->set_memory_at(ni, result);
-      }
     }
 
     // If we have crossed the 3/4 point of max node limit it's too risky
@@ -5022,6 +5217,13 @@ void ConnectionGraph::split_unique_types(GrowableArray<Node *>  &alloc_worklist,
 
     igvn->hash_insert(nmm);
     record_for_optimizer(nmm);
+  }
+
+  //  Phase 3.5: Search for precise instance memory starting from every memory
+  //             state that scalar replacement may query during macro expansion.
+  materialize_instance_slices_at_safepoints(new_index_start, open_instance_aliases, arraycopy_worklist, orig_phis);
+  if (_compile->failing()) {
+    return;
   }
 
   _compile->print_method(PHASE_EA_AFTER_SPLIT_UNIQUE_TYPES_3, 5);

@@ -232,11 +232,16 @@ Node *MemNode::optimize_memory_chain(Node *mchain, const TypePtr *t_adr, Node *l
         ->is_oopptr()->cast_to_ptr_type(t_oop->ptr())
         ->is_oopptr()->cast_to_instance_id(t_oop->instance_id());
       if (t_oop->isa_aryptr()) {
-        mem_t = mem_t->is_aryptr()
-                     ->cast_to_stable(t_oop->is_aryptr()->is_stable())
-                     ->cast_to_size(t_oop->is_aryptr()->size())
-                     ->with_offset(t_oop->is_aryptr()->offset())
-                     ->is_aryptr();
+        // With sparse EA memory, the walk can end on a phi for a general slice
+        // that cannot match an array element type. Only refine array properties
+        // when the phi's slice is an array pointer as well; otherwise the
+        // types cannot match and no split is performed.
+        const TypeAryPtr* mem_t_ary = mem_t->isa_aryptr();
+        mem_t = (mem_t_ary == nullptr) ? nullptr
+              : mem_t_ary->cast_to_stable(t_oop->is_aryptr()->is_stable())
+                         ->cast_to_size(t_oop->is_aryptr()->size())
+                         ->with_offset(t_oop->is_aryptr()->offset())
+                         ->is_aryptr();
       }
       do_split = mem_t == t_oop;
     }
@@ -244,7 +249,12 @@ Node *MemNode::optimize_memory_chain(Node *mchain, const TypePtr *t_adr, Node *l
       // clone the Phi with our address type
       result = mphi->split_out_instance(t_adr, igvn);
     } else {
-      assert(phase->C->get_alias_index(t) == phase->C->get_alias_index(t_adr), "correct memory chain");
+      if (phase->C->get_alias_index(t) != phase->C->get_alias_index(t_adr)) {
+        // Sparse EA MergeMems may leave the requested instance slice implicit.
+        // Keep the original memory chain if the existing Phi cannot be split
+        // to the requested alias without changing its meaning.
+        return mchain;
+      }
     }
   }
   return result;
@@ -291,6 +301,15 @@ static Node *step_through_mergemem(PhaseGVN *phase, MergeMemNode *mmem,  const T
         toop->isa_instptr() &&
         toop->is_instptr()->instance_klass()->is_java_lang_Object() &&
         toop->offset() == Type::OffsetBot)) {
+    Node* slice = mmem->memory_at(alias_idx);
+    Node* explicit_slice = alias_idx < mmem->req() ? mmem->in(alias_idx) : mmem->empty_memory();
+    if (!slice->is_MergeMem() &&
+        (!mmem->is_empty_memory(explicit_slice) || !mmem->base_memory()->is_MergeMem())) {
+      // The common case is either an explicit slice or a sparse fallback to a
+      // non-MergeMem general slice; no recursive MergeMem idealization is needed.
+      return slice;
+    }
+
     // IGVN _delay_transform may be set to true and if that is the case and mmem
     // is already a registered node then the validation inside transform will
     // complain.
@@ -5630,7 +5649,9 @@ void InitializeNode::replace_mem_projs_by(Node* mem, PhaseIterGVN* igvn) {
   apply_to_projs(imax, i, replace_proj, TypeFunc::Memory);
 }
 
-bool InitializeNode::already_has_narrow_mem_proj_with_adr_type(const TypePtr* adr_type) const {
+NarrowMemProjNode* InitializeNode::narrow_mem_proj_or_null(const TypePtr* adr_type) const {
+  // EA may ask for a projection long after Initialize was built, so this helper
+  // returns the existing projection instead of forcing eager creation.
   auto find_proj = [&](ProjNode* proj) {
     if (proj->adr_type() == adr_type) {
       return BREAK_AND_RETURN_CURRENT_PROJ;
@@ -5638,7 +5659,11 @@ bool InitializeNode::already_has_narrow_mem_proj_with_adr_type(const TypePtr* ad
     return CONTINUE;
   };
   DUIterator_Fast imax, i = fast_outs(imax);
-  return apply_to_narrow_mem_projs_any_iterator(UsesIteratorFast(imax, i, this), find_proj) != nullptr;
+  return apply_to_narrow_mem_projs_any_iterator(UsesIteratorFast(imax, i, this), find_proj);
+}
+
+bool InitializeNode::already_has_narrow_mem_proj_with_adr_type(const TypePtr* adr_type) const {
+  return narrow_mem_proj_or_null(adr_type) != nullptr;
 }
 
 MachProjNode* InitializeNode::mem_mach_proj() const {
@@ -5754,11 +5779,14 @@ bool InitializeNode::stores_are_sane(PhaseValues* phase) {
 //
 //
 // ACCESSORS:  There is a special accessor MergeMemNode::base_memory which returns
-// the distinguished "wide" state.  The accessor MergeMemNode::memory_at(N) returns
-// the memory state for alias type <N>, or (if there is no particular slice at <N>,
-// it returns the base memory.  To prevent bugs, memory_at does not accept <Top>
-// or <Bot> indexes.  The iterator MergeMemStream provides robust iteration over
-// MergeMem nodes or pairs of such nodes, ensuring that the non-top edges are visited.
+// the distinguished "wide" state.  The accessor MergeMemNode::memory_at_base(N)
+// returns the memory state for alias type <N>, or (if there is no particular
+// slice at <N>) the base memory.  The accessor MergeMemNode::memory_at(N) is the
+// semantic lookup.  It additionally resolves absent EA known-instance slices to
+// their matching general slice for MergeMems marked by escape analysis.  To
+// prevent bugs, these accessors do not accept <Top> or <Bot> indexes.  The
+// iterator MergeMemStream provides robust iteration over MergeMem nodes or pairs
+// of such nodes, ensuring that the non-top edges are visited.
 //
 // %%%% We may get rid of base_memory as a separate accessor at some point; it isn't
 // really that different from the other memory inputs.  An abbreviation called
@@ -5785,7 +5813,9 @@ Node* MergeMemNode::make_empty_memory() {
   return empty_memory;
 }
 
-MergeMemNode::MergeMemNode(Node *new_base) : Node(1+Compile::AliasIdxRaw) {
+MergeMemNode::MergeMemNode(Node *new_base)
+  : Node(1+Compile::AliasIdxRaw),
+    _use_general_memory_for_unset_instance_slices(false) {
   init_class_id(Class_MergeMem);
   // all inputs are nullified in Node::Node(int)
   // set_input(0, nullptr);  // no control input
@@ -5799,6 +5829,10 @@ MergeMemNode::MergeMemNode(Node *new_base) : Node(1+Compile::AliasIdxRaw) {
 
   if( new_base != nullptr && new_base->is_MergeMem() ) {
     MergeMemNode* mdef = new_base->as_MergeMem();
+    // Cloning a MergeMem must clone the sparse-slice interpretation too;
+    // otherwise absent instance slices would silently change meaning.
+    _use_general_memory_for_unset_instance_slices =
+      mdef->_use_general_memory_for_unset_instance_slices;
     assert(mdef->empty_memory() == empty_mem, "consistent sentinels");
     for (MergeMemStream mms(this, mdef); mms.next_non_empty2(); ) {
       mms.set_memory(mms.memory2());
@@ -5863,7 +5897,14 @@ Node *MergeMemNode::Ideal(PhaseGVN *phase, bool can_reshape) {
   Node* new_base = old_base;
 
   // simplify stacked MergeMems in base memory
-  if (old_mbase)  new_base = old_mbase->base_memory();
+  if (old_mbase) {
+    new_base = old_mbase->base_memory();
+    if (old_mbase->uses_general_memory_for_unset_instance_slices()) {
+      // Flattening the base MergeMem exposes its slices through this MergeMem,
+      // so preserve the sparse fallback bit on the outer node.
+      _use_general_memory_for_unset_instance_slices = true;
+    }
+  }
 
   // the base memory might contribute new slices beyond my req()
   if (old_mbase)  grow_to_match(old_mbase);
@@ -5880,7 +5921,9 @@ Node *MergeMemNode::Ideal(PhaseGVN *phase, bool can_reshape) {
     // calculate the old memory value
     Node* old_mem = old_in;
     if (old_mem == empty_mem)  old_mem = old_base;
-    assert(old_mem == memory_at(i), "");
+    // An explicit slice must agree with the semantic lookup. An empty slice
+    // intentionally may not (sparse EA fallback to the general slice).
+    assert(old_in == empty_mem || old_in == memory_at(i), "");
 
     // maybe update (reslice) the old memory value
 
@@ -5906,7 +5949,23 @@ Node *MergeMemNode::Ideal(PhaseGVN *phase, bool can_reshape) {
       new_mem = (new_base == this || new_base == empty_mem)? empty_mem : new_base;
     }
     else if (old_mmem != nullptr) {
-      new_mem = old_mmem->memory_at(i);
+      Node* old_mmem_in = i < old_mmem->req() ? old_mmem->in(i) : old_mmem->empty_memory();
+      Compile* C = Compile::current();
+      // The nested sparse MergeMem resolves this absent known-instance slice
+      // to its general slice. Keep the slice sparse on this node as well
+      // instead of materializing it, so flattening a sparse MergeMem (the
+      // common stacked-base case) does not expand the instance slices that
+      // escape analysis intentionally left unset.
+      const bool use_general_fallback = old_mmem->uses_general_memory_for_unset_instance_slices() &&
+                                        C->do_aliasing() && i < (uint)C->num_alias_types() &&
+                                        C->get_general_index(i) != (int)i &&
+                                        old_mmem->is_empty_memory(old_mmem_in);
+      if (use_general_fallback) {
+        _use_general_memory_for_unset_instance_slices = true;
+        new_mem = new_base;
+      } else {
+        new_mem = old_mmem->memory_at(i);
+      }
     }
     // else preceding memory was not a MergeMem
 
@@ -5982,7 +6041,9 @@ Node *MergeMemNode::Ideal(PhaseGVN *phase, bool can_reshape) {
 void MergeMemNode::set_base_memory(Node *new_base) {
   Node* empty_mem = empty_memory();
   set_req(Compile::AliasIdxBot, new_base);
-  assert(memory_at(req()) == new_base, "must set default memory");
+  // Check the physical base fallback; semantic memory_at() may use sparse EA
+  // fallback to a general slice instead.
+  assert(memory_at_base(req()) == new_base, "must set default memory");
   // Clear out other occurrences of new_base:
   if (new_base != empty_mem) {
     for (uint i = Compile::AliasIdxRaw; i < req(); i++) {
@@ -6061,7 +6122,7 @@ static void verify_memory_slice(const MergeMemNode* m, int alias_idx, Node* n) {
 
 
 //-----------------------------memory_at---------------------------------------
-Node* MergeMemNode::memory_at(uint alias_idx) const {
+Node* MergeMemNode::memory_at_base(uint alias_idx) const {
   assert(alias_idx >= Compile::AliasIdxRaw ||
          (alias_idx == Compile::AliasIdxBot && !Compile::current()->do_aliasing()),
          "must avoid base_memory and AliasIdxTop");
@@ -6094,6 +6155,26 @@ Node* MergeMemNode::memory_at(uint alias_idx) const {
     #endif
   }
   return n;
+}
+
+Node* MergeMemNode::memory_at(uint alias_idx) const {
+  Node* n = alias_idx < req() ? in(alias_idx) : empty_memory();
+  if (is_empty_memory(n) && _use_general_memory_for_unset_instance_slices) {
+    Compile* C = Compile::current();
+    if (C->do_aliasing() && alias_idx < (uint)C->num_alias_types()) {
+      // Only known-instance aliases have a distinct general alias index.
+      const int general_idx = C->get_general_index(alias_idx);
+      if (general_idx != (int)alias_idx && (uint)general_idx < req()) {
+        Node* general_mem = in(general_idx);
+        if (!is_empty_memory(general_mem)) {
+          // EA intentionally omitted this known-instance slice; use the matching
+          // general field/element slice rather than the wide base memory.
+          return general_mem;
+        }
+      }
+    }
+  }
+  return memory_at_base(alias_idx);
 }
 
 //---------------------------set_memory_at-------------------------------------

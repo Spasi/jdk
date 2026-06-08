@@ -2631,39 +2631,74 @@ Node *PhiNode::Ideal(PhaseGVN *phase, bool can_reshape) {
         PhaseIterGVN* igvn = phase->is_IterGVN();
         assert(igvn != nullptr, "sanity check");
         PhiNode* new_base = (PhiNode*) clone();
+        // Build the base-memory Phi from the original base inputs. A self-loop
+        // through the old Phi must become a self-loop through the cloned Phi.
+        for (uint i = 1; i < req(); ++i) {
+          Node* ii = in(i);
+          if (ii->is_MergeMem()) {
+            Node* base_mem = ii->as_MergeMem()->base_memory();
+            new_base->set_req(i, base_mem == this ? new_base : base_mem);
+          } else if (ii == this) {
+            new_base->set_req(i, new_base);
+          }
+        }
         // Must eagerly register phis, since they participate in loops.
         igvn->register_new_node_with_optimizer(new_base);
 
         MergeMemNode* result = MergeMemNode::make(new_base);
+        // Select the requested slice from each original input. If the selected
+        // slice refers back to this Phi, redirect it to the split slice Phi.
+        auto split_memory_input = [this](Node* input, uint alias_idx, Node* self_phi) {
+          Node* slice_mem = input;
+          if (input->is_MergeMem()) {
+            slice_mem = input->as_MergeMem()->memory_at(alias_idx);
+          }
+          if (slice_mem == this) {
+            slice_mem = self_phi;
+          }
+          return slice_mem;
+        };
+        // A split MergeMem can inherit sparse fallback only when every MergeMem
+        // input already gives absent instance slices that same fallback meaning.
+        bool use_general_memory_for_unset_instance_slices = false;
+        bool has_unmarked_mergemem_input = false;
         for (uint i = 1; i < req(); ++i) {
           Node *ii = in(i);
           if (ii->is_MergeMem()) {
             MergeMemNode* n = ii->as_MergeMem();
-            for (MergeMemStream mms(result, n); mms.next_non_empty2(); ) {
-              // If we have not seen this slice yet, make a phi for it.
-              bool made_new_phi = false;
-              if (mms.is_empty()) {
-                Node* new_phi = new_base->slice_memory(mms.adr_type(phase->C));
-                made_new_phi = true;
-                igvn->register_new_node_with_optimizer(new_phi);
-                mms.set_memory(new_phi);
+            if (n->uses_general_memory_for_unset_instance_slices()) {
+              use_general_memory_for_unset_instance_slices = true;
+            } else {
+              has_unmarked_mergemem_input = true;
+            }
+            for (MergeMemStream mms(n); mms.next_non_empty(); ) {
+              if (mms.at_base_memory()) {
+                continue;
               }
-              Node* phi = mms.memory();
-              assert(made_new_phi || phi->in(i) == n, "replace the i-th merge by a slice");
-              phi->set_req_X(i, mms.memory2(), phase);
+              const uint alias_idx = mms.alias_idx();
+              Node* result_slice = alias_idx < result->req() ? result->in(alias_idx) : result->empty_memory();
+              if (!result->is_empty_memory(result_slice)) {
+                continue;
+              }
+
+              const TypePtr* slice_adr_type = mms.adr_type(phase->C);
+              Node* new_phi = new_base->slice_memory(slice_adr_type);
+              // Materialize only slices that are explicit in some input. Other
+              // known-instance slices stay sparse and use the general fallback.
+              for (uint j = 1; j < req(); ++j) {
+                Node* jj = in(j);
+                Node* slice_mem = split_memory_input(jj, alias_idx, new_phi);
+                new_phi->set_req(j, slice_mem);
+              }
+              igvn->register_new_node_with_optimizer(new_phi);
+              result->set_memory_at(alias_idx, new_phi);
             }
           }
         }
-        // Distribute all self-loops.
-        { // (Extra braces to hide mms.)
-          for (MergeMemStream mms(result); mms.next_non_empty(); ) {
-            Node* phi = mms.memory();
-            for (uint i = 1; i < req(); ++i) {
-              if (phi->in(i) == this) {
-                phi->set_req_X(i, phi, phase);
-              }
-            }
-          }
+        // Only preserve sparse fallback semantics when every MergeMem input has
+        // the same interpretation for unset known-instance slices.
+        if (use_general_memory_for_unset_instance_slices && !has_unmarked_mergemem_input) {
+          result->set_use_general_memory_for_unset_instance_slices();
         }
 
         // We could immediately transform the new Phi nodes here, but that can

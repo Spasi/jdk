@@ -1449,6 +1449,8 @@ public:
   // For use with IGVN
   void replace_mem_projs_by(Node* mem, PhaseIterGVN* igvn);
 
+  // Find a NarrowMemProj with this adr_type and this node as input, if one exists.
+  NarrowMemProjNode* narrow_mem_proj_or_null(const TypePtr* adr_type) const;
   // Does a NarrowMemProj with this adr_type and this node as input already exist?
   bool already_has_narrow_mem_proj_with_adr_type(const TypePtr* adr_type) const;
 
@@ -1508,6 +1510,9 @@ class MergeMemNode: public Node {
   virtual uint hash() const ;                  // { return NO_HASH; }
   virtual bool cmp( const Node &n ) const ;    // Always fail, except on self
   friend class MergeMemStream;
+  // True when empty known-instance slices should fall back to their matching
+  // general slice. Only EA sets this after it has intentionally kept slices sparse.
+  bool _use_general_memory_for_unset_instance_slices;
   MergeMemNode(Node* def);  // clients use MergeMemNode::make
 
 public:
@@ -1516,6 +1521,8 @@ public:
   // In either case, the result is a newly created MergeMem.
   static MergeMemNode* make(Node* base_memory);
 
+  // The extra sparse-slice flag changes the node size from Node's default size.
+  virtual uint size_of() const { return sizeof(*this); }
   virtual int Opcode() const;
   virtual Node* Identity(PhaseGVN* phase);
   virtual Node *Ideal(PhaseGVN *phase, bool can_reshape);
@@ -1526,8 +1533,20 @@ public:
   virtual const TypePtr *adr_type() const { return TypePtr::BOTTOM; }
   // sparse accessors
   // Fetch the previously stored "set_memory_at", or else the base memory.
+  Node* memory_at_base(uint alias_idx) const;
+  // Fetch the semantic memory for alias_idx. Marked EA MergeMems resolve absent
+  // known-instance slices to the matching general slice before the base memory.
   // (Caller should clone it if it is a phi-nest.)
   Node* memory_at(uint alias_idx) const;
+  // If true, EA left some known-instance slices unset intentionally. MergeMem
+  // idealization should preserve that sparse representation instead of
+  // expanding those slices eagerly.
+  bool uses_general_memory_for_unset_instance_slices() const {
+    return _use_general_memory_for_unset_instance_slices;
+  }
+  void set_use_general_memory_for_unset_instance_slices() {
+    _use_general_memory_for_unset_instance_slices = true;
+  }
   // set the memory, regardless of its previous value
   void set_memory_at(uint alias_idx, Node* n);
   // the "base" is the memory that provides the non-finite support

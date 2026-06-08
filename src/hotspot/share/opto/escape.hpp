@@ -561,6 +561,11 @@ private:
 
   void  move_inst_mem(Node* n, Unique_Node_List& orig_phis);
   Node* find_inst_mem(Node* mem, int alias_idx, Unique_Node_List& orig_phi_worklist, uint rec_depth = 0);
+  Node* find_inst_mem_initialize_proj(Node* general_proj, int alias_idx);
+  void  materialize_instance_slices_at_safepoints(uint new_index_start,
+                                                  const VectorSet& open_instance_aliases,
+                                                  GrowableArray<ArrayCopyNode*>& arraycopy_worklist,
+                                                  Unique_Node_List& orig_phis);
   Node* step_through_mergemem(MergeMemNode *mmem, int alias_idx, const TypeOopPtr *toop);
 
   Node_Array _node_map; // used for bookkeeping during type splitting

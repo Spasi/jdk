@@ -157,8 +157,10 @@ class PhiNode : public TypeNode {
   friend class PhaseRenumberLive;
 
   const TypePtr* const _adr_type; // non-null only for Type::MEMORY nodes.
-  // The following fields are only used for data PhiNodes to indicate
-  // that the PhiNode represents the value of a known instance field.
+  // The following fields are used for data PhiNodes to indicate that the
+  // PhiNode represents the value of a known instance field. _inst_mem_id is
+  // also set on memory Phis that escape analysis splits out of a wide memory
+  // Phi, recording the node index of that original Phi.
         int _inst_mem_id; // Instance memory id (node index of the memory Phi)
         int _inst_id;     // Instance id of the memory slice.
   const int _inst_index;  // Alias index of the instance memory slice.
