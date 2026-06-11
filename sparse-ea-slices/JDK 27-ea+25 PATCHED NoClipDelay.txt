@@ -1,0 +1,170 @@
+# JMH version: 1.37
+# VM version: JDK 27-internal, OpenJDK 64-Bit Server VM, 27-internal-adhoc.spasi.jdk
+# VM invoker: D:\CLONES\jdk\build\windows-x86_64-server-release\jdk\bin\java.exe
+# VM options: -XX:+UnlockDiagnosticVMOptions -XX:+CITime -XX:-ClipInlining -XX:+UnlockDiagnosticVMOptions -XX:+DelayAfterInliningCutoff -Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8 --enable-native-access=ALL-UNNAMED
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 20 iterations, 2 s each
+# Measurement: 3 iterations, 2 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: FFMStructAccessTest.copyReinterpretInline16
+
+# Run progress: 0,00% complete, ETA 00:00:46
+# Fork: 1 of 1
+# Warmup Iteration   1: 14471511,511 ns/op
+# Warmup Iteration   2: 10648768,085 ns/op
+# Warmup Iteration   3: 9437,261 ns/op
+# Warmup Iteration   4: 8070,781 ns/op
+# Warmup Iteration   5: 8071,142 ns/op
+# Warmup Iteration   6: 8072,379 ns/op
+# Warmup Iteration   7: 8077,383 ns/op
+# Warmup Iteration   8: 8074,639 ns/op
+# Warmup Iteration   9: 8069,611 ns/op
+# Warmup Iteration  10: 8066,702 ns/op
+# Warmup Iteration  11: 8066,665 ns/op
+# Warmup Iteration  12: 8069,945 ns/op
+# Warmup Iteration  13: 8067,935 ns/op
+# Warmup Iteration  14: 8077,224 ns/op
+# Warmup Iteration  15: 8075,571 ns/op
+# Warmup Iteration  16: 8071,327 ns/op
+# Warmup Iteration  17: 8089,767 ns/op
+# Warmup Iteration  18: 8073,250 ns/op
+# Warmup Iteration  19: 8068,098 ns/op
+# Warmup Iteration  20: 8101,522 ns/op
+Iteration   1: 8068,845 ns/op
+Iteration   2: 8072,613 ns/op
+Iteration   3: 8065,903 ns/op
+
+Individual compiler times (for compiled methods only)
+------------------------------------------------
+
+  C1 {speed: 581175.393 bytes/s; standard:  0.183 s, 106275 bytes, 1289 methods; osr:  0.001 s, 674 bytes, 2 methods; nmethods_size: 2377248 bytes; nmethods_code_size: 1745624 bytes}
+  C2 {speed: 77247.426 bytes/s; standard:  1.278 s, 136113 bytes, 154 methods; osr:  1.675 s, 92044 bytes, 5 methods; nmethods_size: 248592 bytes; nmethods_code_size: 157024 bytes}
+
+Individual compilation Tier times (for compiled methods only)
+------------------------------------------------
+
+  Tier1 {speed: 141540.384 bytes/s; standard:  0.006 s, 906 bytes, 195 methods; osr:  0.000 s, 0 bytes, 0 methods; nmethods_size: 43856 bytes; nmethods_code_size: 28256 bytes}
+  Tier2 {speed:  0.000 bytes/s; standard:  0.000 s, 0 bytes, 0 methods; osr:  0.000 s, 0 bytes, 0 methods; nmethods_size: 0 bytes; nmethods_code_size: 0 bytes}
+  Tier3 {speed: 597018.707 bytes/s; standard:  0.176 s, 105369 bytes, 1094 methods; osr:  0.001 s, 674 bytes, 2 methods; nmethods_size: 2333392 bytes; nmethods_code_size: 1717368 bytes}
+  Tier4 {speed: 77247.426 bytes/s; standard:  1.278 s, 136113 bytes, 154 methods; osr:  1.675 s, 92044 bytes, 5 methods; nmethods_size: 248592 bytes; nmethods_code_size: 157024 bytes}
+
+Accumulated compiler times
+----------------------------------------------------------
+  Total compilation time   :   3.868 s
+    Standard compilation   :   1.461 s, Average : 0.001 s
+    Bailed out compilation :   0.730 s, Average : 0.730 s
+    On stack replacement   :   1.677 s, Average : 0.240 s
+    Invalidated            :   0.000 s, Average : 0.000 s
+
+    C1 Compile Time:        0.913 s
+       Setup time:            0.001 s
+       Build HIR:             0.800 s
+         Parse:                 0.078 s
+         Optimize blocks:       0.000 s
+         GVN:                   0.038 s
+         Null checks elim:      0.524 s
+         Range checks elim:     0.001 s
+         Other:                 0.159 s
+       Emit LIR:              0.064 s
+         LIR Gen:               0.014 s
+         Linear Scan:           0.050 s
+         Other:                 0.001 s
+       Code Emission:         0.022 s
+       Code Installation:     0.020 s
+       Other:                 0.006 s
+
+    C2 Compile Time:        2.953 s
+       Parse:                 0.069 s
+       Optimize:              2.742 s
+         Escape Analysis:       0.012 s
+           Conn Graph:            0.003 s
+           Macro Eliminate:       1.411 s
+         GVN 1:                 0.021 s
+         Incremental Inline:    0.481 s
+           IdealLoop:             0.000 s
+          (IGVN:                  0.314 s)
+          (Inline:                0.146 s)
+          (Prune Useless:         0.021 s)
+           Other:                 0.481 s
+         Vector:                0.000 s
+           Box elimination:     0.000 s
+             IGVN:              0.000 s
+             Prune Useless:     0.000 s
+         Renumber Live:         0.007 s
+         IdealLoop:             0.068 s
+           ReachabilityFence:   0.000 s
+             Optimize:          0.000 s
+             Expand:            0.000 s
+           AutoVectorize:       0.000 s
+         IdealLoop Verify:      0.000 s
+         Cond Const Prop:       0.003 s
+         GVN 2:                 0.003 s
+         Macro Expand:          0.005 s
+         Barrier Expand:        0.001 s
+         Graph Reshape:         0.002 s
+         Other:                 2.140 s
+       Matcher:                    0.018 s
+         Post Selection Cleanup:   0.001 s
+       Scheduler:                  0.020 s
+       Regalloc:              0.080 s
+         Ctor Chaitin:          0.000 s
+         Build IFG (virt):      0.001 s
+         Build IFG (phys):      0.015 s
+         Compute Liveness:      0.026 s
+         Regalloc Split:        0.007 s
+         Postalloc Copy Rem:    0.016 s
+         Merge multidefs:       0.002 s
+         Fixup Spills:          0.000 s
+         Compact:               0.000 s
+         Coalesce 1:            0.002 s
+         Coalesce 2:            0.001 s
+         Coalesce 3:            0.001 s
+         Cache LRG:             0.000 s
+         Simplify:              0.003 s
+         Select:                0.006 s
+       Block Ordering:        0.001 s
+       Peephole:              0.000 s
+       Code Emission:           0.021 s
+         Insn Scheduling:       0.000 s
+         Shorten branches:      0.003 s
+         Build OOP maps:        0.004 s
+         Fill buffer:           0.004 s
+         Code Installation:     0.002 s
+         Other:                 0.009 s
+
+  Total compiled methods    :     1450 methods
+    Standard compilation    :     1443 methods
+    On stack replacement    :        7 methods
+  Total compiled bytecodes  :   335106 bytes
+    Standard compilation    :   242388 bytes
+    On stack replacement    :    92718 bytes
+  Average compilation speed :    86643 bytes/s
+
+  nmethod code size         :  1902648 bytes
+  nmethod total size        :  2625840 bytes
+
+
+Result "FFMStructAccessTest.copyReinterpretInline16":
+  8069,120 ±(99.9%) 61,366 ns/op [Average]
+  (min, avg, max) = (8065,903, 8069,120, 8072,613), stdev = 3,364
+  CI (99.9%): [8007,754, 8130,487] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:00:46
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+NOTE: Current JVM experimentally supports Compiler Blackholes, and they are in use. Please exercise
+extra caution when trusting the results, look into the generated code to check the benchmark still
+works, and factor in a small probability of new VM bugs. Additionally, while comparisons between
+different JVMs are already problematic, the performance difference caused by different Blackhole
+modes can be very significant. Please make sure you use the consistent Blackhole mode for comparisons.
+
+Benchmark                                       Mode  Cnt     Score    Error  Units
+FFMStructAccessTest.copyReinterpretInline16  avgt    3  8069,120 ± 61,366  ns/op

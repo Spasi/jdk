@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>EA Optimization Benchmark Summary - SVG</title><style>
+:root{--bg:#f7f7f4;--panel:#fff;--ink:#171717;--muted:#626b7a;--line:#d7dae1;--best:#167a5a;--worst:#a33a2f}*{box-sizing:border-box}body{margin:18px;background:var(--bg);color:var(--ink);font:13px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace}h1{font-size:22px;margin:0 0 4px}h2{font-size:15px;margin:14px 0 7px;border-bottom:1px solid var(--line)}p{margin:4px 0 8px;color:var(--muted)}code{font-family:inherit}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start}.wide{grid-column:1/-1}.panel{background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:10px;box-shadow:0 1px 2px #0000000d;overflow:hidden}table{width:100%;border-collapse:collapse}th,td{padding:3px 5px;border-bottom:1px solid #ececf0;white-space:nowrap;vertical-align:middle}th{text-align:left;color:#3c4350}.num{text-align:right;font-variant-numeric:tabular-nums}.hero{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}.card{background:#fff;border:1px solid var(--line);border-radius:7px;padding:8px}.card b{display:block;font-size:19px}.good{color:var(--best)}.bad{color:var(--worst)}svg{width:100%;height:auto;display:block}.svg-title{font-weight:800;font-size:14px;fill:#171717}.axis-note,.tick{font-size:10px;fill:#626b7a}.axis-label{font-size:12px;fill:#384050}.row-label{font-size:11px;fill:#20242a}.point-label{font-size:12px;fill:#20242a}.value{font-size:11px;fill:#171717}.best-text{font-size:11px;fill:#167a5a;font-weight:800}.worst-text{font-size:11px;fill:#a33a2f;font-weight:800}.bar-bg,.spark-bg{fill:#f0f1f4}.plot-bg{fill:#fbfbfc;stroke:#d7dae1}.grid-line{stroke:#e6e8ed;stroke-width:1}.axis{stroke:#9ca3af;stroke-width:1}.connector{stroke:#98a2b3;stroke-width:2;stroke-dasharray:3 3}.spark{width:250px;max-width:100%}.legend td:nth-child(4),.legend td:nth-child(5){max-width:38ch;overflow:hidden;text-overflow:ellipsis}@media(max-width:1100px){.grid,.hero{grid-template-columns:1fr}body{margin:10px}}
+</style></head><body>
+<h1>EA Optimization Benchmark Summary - SVG Edition</h1><p>Benchmark: <b>FFMStructAccessTest.copyReinterpretInline16</b>. Latency is always <b>us/op</b>, compile time is always <b>s</b>, and C2 speed is always <b>bytes/s</b>.</p><p>TTP is the first iteration within 10% of the best observed latency in that run. Lower peak latency, lower TTP, and lower C2 time are better; higher C2 speed is better.</p>
+<div class="hero"><div class="card"><span>Best peak</span><b class="good">8.065 us/op</b><span>B:NoClip+Delay at M3</span></div><div class="card"><span>Worst peak</span><b class="bad">7,581.102 us/op</b><span>B:NoClip at M1</span></div><div class="card"><span>Best C2 time</span><b class="good">1.058 s</b><span>P:default</span></div><div class="card"><span>Best C2 speed</span><b class="good">209,157.597 bytes/s</b><span>P:default</span></div></div>
+<div class="grid">
+<section class="panel"><h2>Peak Latency</h2><svg viewBox="0 0 840 280" role="img" aria-label="Peak latency, us/op">
+<text x="0" y="16" class="svg-title">Peak latency, us/op</text>
+<text x="0" y="33" class="axis-note">shorter is better; log scale</text>
+<line x1="132" y1="42" x2="600" y2="42" class="axis"/>
+<text x="0" y="65" class="row-label">B:default</text>
+<rect x="132" y="52" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="52" width="247.7" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="64" class="value">287.784 us/op</text>
+<text x="0" y="90" class="row-label">B:NoEA</text>
+<rect x="132" y="77" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="77" width="283.6" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="89" class="value">490.439 us/op</text>
+<text x="0" y="115" class="row-label">B:NoClip</text>
+<rect x="132" y="102" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="102" width="468.0" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="114" class="worst-text">7,581.102 us/op  WORST</text>
+<text x="0" y="140" class="row-label">B:NoClip+Delay</text>
+<rect x="132" y="127" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="127" width="7.0" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="139" class="best-text">8.065 us/op  BEST</text>
+<text x="0" y="165" class="row-label">P:default</text>
+<rect x="132" y="152" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="152" width="246.2" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="164" class="value">281.214 us/op</text>
+<text x="0" y="190" class="row-label">P:NoEA</text>
+<rect x="132" y="177" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="177" width="283.2" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="189" class="value">487.301 us/op</text>
+<text x="0" y="215" class="row-label">P:NoClip</text>
+<rect x="132" y="202" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="202" width="43.2" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="214" class="value">13.806 us/op</text>
+<text x="0" y="240" class="row-label">P:NoClip+Delay</text>
+<rect x="132" y="227" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="227" width="7.0" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="239" class="value">8.066 us/op</text>
+</svg></section>
+<section class="panel"><h2>Time To Peak</h2><svg viewBox="0 0 840 280" role="img" aria-label="Time to near-peak">
+<text x="0" y="16" class="svg-title">Time to near-peak</text>
+<text x="0" y="33" class="axis-note">shorter is better</text>
+<line x1="132" y1="42" x2="600" y2="42" class="axis"/>
+<text x="0" y="65" class="row-label">B:default</text>
+<rect x="132" y="52" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="52" width="88.4" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="64" class="value">W6</text>
+<text x="0" y="90" class="row-label">B:NoEA</text>
+<rect x="132" y="77" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="77" width="34.1" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="89" class="value">W4</text>
+<text x="0" y="115" class="row-label">B:NoClip</text>
+<rect x="132" y="102" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="102" width="468.0" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="114" class="worst-text">W20  WORST</text>
+<text x="0" y="140" class="row-label">B:NoClip+Delay</text>
+<rect x="132" y="127" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="127" width="305.3" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="139" class="value">W14</text>
+<text x="0" y="165" class="row-label">P:default</text>
+<rect x="132" y="152" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="152" width="7.0" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="164" class="best-text">W3  BEST</text>
+<text x="0" y="190" class="row-label">P:NoEA</text>
+<rect x="132" y="177" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="177" width="34.1" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="189" class="value">W4</text>
+<text x="0" y="215" class="row-label">P:NoClip</text>
+<rect x="132" y="202" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="202" width="7.0" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="214" class="best-text">W3  BEST</text>
+<text x="0" y="240" class="row-label">P:NoClip+Delay</text>
+<rect x="132" y="227" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="227" width="34.1" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="239" class="value">W4</text>
+</svg></section>
+<section class="panel"><h2>C2 Compile Time</h2><svg viewBox="0 0 840 280" role="img" aria-label="C2 compile time, s">
+<text x="0" y="16" class="svg-title">C2 compile time, s</text>
+<text x="0" y="33" class="axis-note">shorter is better; log scale</text>
+<line x1="132" y1="42" x2="600" y2="42" class="axis"/>
+<text x="0" y="65" class="row-label">B:default</text>
+<rect x="132" y="52" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="52" width="277.6" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="64" class="value">8.495 s</text>
+<text x="0" y="90" class="row-label">B:NoEA</text>
+<rect x="132" y="77" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="77" width="29.3" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="89" class="value">1.256 s</text>
+<text x="0" y="115" class="row-label">B:NoClip</text>
+<rect x="132" y="102" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="102" width="468.0" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="114" class="worst-text">36.794 s  WORST</text>
+<text x="0" y="140" class="row-label">B:NoClip+Delay</text>
+<rect x="132" y="127" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="127" width="408.3" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="139" class="value">23.230 s</text>
+<text x="0" y="165" class="row-label">P:default</text>
+<rect x="132" y="152" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="152" width="7.0" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="164" class="best-text">1.058 s  BEST</text>
+<text x="0" y="190" class="row-label">P:NoEA</text>
+<rect x="132" y="177" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="177" width="30.3" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="189" class="value">1.266 s</text>
+<text x="0" y="215" class="row-label">P:NoClip</text>
+<rect x="132" y="202" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="202" width="95.5" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="214" class="value">2.091 s</text>
+<text x="0" y="240" class="row-label">P:NoClip+Delay</text>
+<rect x="132" y="227" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="227" width="140.3" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="239" class="value">2.953 s</text>
+</svg></section>
+<section class="panel"><h2>C2 Speed</h2><svg viewBox="0 0 840 280" role="img" aria-label="C2 speed, bytes/s">
+<text x="0" y="16" class="svg-title">C2 speed, bytes/s</text>
+<text x="0" y="33" class="axis-note">longer is better</text>
+<line x1="132" y1="42" x2="600" y2="42" class="axis"/>
+<text x="0" y="65" class="row-label">B:default</text>
+<rect x="132" y="52" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="52" width="56.0" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="64" class="value">25,335.259 bytes/s</text>
+<text x="0" y="90" class="row-label">B:NoEA</text>
+<rect x="132" y="77" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="77" width="386.9" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="89" class="value">172,957.027 bytes/s</text>
+<text x="0" y="115" class="row-label">B:NoClip</text>
+<rect x="132" y="102" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="102" width="7.0" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="114" class="worst-text">3,494.572 bytes/s  WORST</text>
+<text x="0" y="140" class="row-label">B:NoClip+Delay</text>
+<rect x="132" y="127" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="127" width="20.4" height="15" rx="3" fill="#a33a2f" opacity="0.72"/>
+<text x="612" y="139" class="value">9,470.282 bytes/s</text>
+<text x="0" y="165" class="row-label">P:default</text>
+<rect x="132" y="152" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="152" width="468.0" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="164" class="best-text">209,157.597 bytes/s  BEST</text>
+<text x="0" y="190" class="row-label">P:NoEA</text>
+<rect x="132" y="177" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="177" width="393.3" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="189" class="value">175,814.158 bytes/s</text>
+<text x="0" y="215" class="row-label">P:NoClip</text>
+<rect x="132" y="202" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="202" width="244.1" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="214" class="value">109,250.454 bytes/s</text>
+<text x="0" y="240" class="row-label">P:NoClip+Delay</text>
+<rect x="132" y="227" width="468" height="15" rx="3" class="bar-bg"/>
+<rect x="132" y="227" width="172.3" height="15" rx="3" fill="#167a5a" opacity="0.72"/>
+<text x="612" y="239" class="value">77,247.426 bytes/s</text>
+</svg></section>
+<section class="panel"><h2>Baseline To Patched: C2 Time</h2><svg viewBox="0 0 840 266" role="img" aria-label="C2 time movement">
+<text x="0" y="16" class="svg-title">C2 time movement</text>
+<text x="0" y="33" class="axis-note">baseline to patched; left is better</text>
+<line x1="132" y1="54" x2="670" y2="54" class="axis"/>
+<text x="132" y="47" class="tick">1.058 s</text>
+<text x="670" y="47" text-anchor="end" class="tick">36.794 s</text>
+<text x="690" y="47" class="axis-note">ratio</text>
+<text x="0" y="77" class="row-label">default</text>
+<line x1="447.8" y1="72" x2="132.0" y2="72" class="connector"/>
+<circle cx="447.8" cy="72" r="5" fill="#a33a2f"/>
+<circle cx="132.0" cy="72" r="5" fill="#167a5a"/>
+<text x="447.8" y="90" text-anchor="middle" class="tick">8.495</text>
+<text x="132.0" y="63" text-anchor="middle" class="tick">1.058</text>
+<text x="690" y="76" class="value">8.0x</text>
+<text x="0" y="117" class="row-label">NoEA</text>
+<line x1="158.0" y1="112" x2="159.2" y2="112" class="connector"/>
+<circle cx="158.0" cy="112" r="5" fill="#a33a2f"/>
+<circle cx="159.2" cy="112" r="5" fill="#167a5a"/>
+<text x="158.0" y="130" text-anchor="middle" class="tick">1.256</text>
+<text x="159.2" y="103" text-anchor="middle" class="tick">1.266</text>
+<text x="690" y="116" class="value">1.0x</text>
+<text x="0" y="157" class="row-label">NoClip</text>
+<line x1="670.0" y1="152" x2="235.3" y2="152" class="connector"/>
+<circle cx="670.0" cy="152" r="5" fill="#a33a2f"/>
+<circle cx="235.3" cy="152" r="5" fill="#167a5a"/>
+<text x="670.0" y="170" text-anchor="middle" class="tick">36.794</text>
+<text x="235.3" y="143" text-anchor="middle" class="tick">2.091</text>
+<text x="690" y="156" class="value">17.6x</text>
+<text x="0" y="197" class="row-label">NoClip+Delay</text>
+<line x1="600.3" y1="192" x2="287.6" y2="192" class="connector"/>
+<circle cx="600.3" cy="192" r="5" fill="#a33a2f"/>
+<circle cx="287.6" cy="192" r="5" fill="#167a5a"/>
+<text x="600.3" y="210" text-anchor="middle" class="tick">23.230</text>
+<text x="287.6" y="183" text-anchor="middle" class="tick">2.953</text>
+<text x="690" y="196" class="value">7.9x</text>
+</svg></section>
+<section class="panel"><h2>Baseline To Patched: TTP</h2><svg viewBox="0 0 840 266" role="img" aria-label="TTP movement">
+<text x="0" y="16" class="svg-title">TTP movement</text>
+<text x="0" y="33" class="axis-note">baseline to patched; left is better</text>
+<line x1="132" y1="54" x2="670" y2="54" class="axis"/>
+<text x="132" y="47" class="tick">3.000 warmup</text>
+<text x="670" y="47" text-anchor="end" class="tick">20.000 warmup</text>
+<text x="690" y="47" class="axis-note">ratio</text>
+<text x="0" y="77" class="row-label">default</text>
+<line x1="226.9" y1="72" x2="132.0" y2="72" class="connector"/>
+<circle cx="226.9" cy="72" r="5" fill="#a33a2f"/>
+<circle cx="132.0" cy="72" r="5" fill="#167a5a"/>
+<text x="226.9" y="90" text-anchor="middle" class="tick">W6</text>
+<text x="132.0" y="63" text-anchor="middle" class="tick">W3</text>
+<text x="690" y="76" class="value">2.0x</text>
+<text x="0" y="117" class="row-label">NoEA</text>
+<line x1="163.6" y1="112" x2="163.6" y2="112" class="connector"/>
+<circle cx="163.6" cy="112" r="5" fill="#a33a2f"/>
+<circle cx="163.6" cy="112" r="5" fill="#167a5a"/>
+<text x="163.6" y="130" text-anchor="middle" class="tick">W4</text>
+<text x="163.6" y="103" text-anchor="middle" class="tick">W4</text>
+<text x="690" y="116" class="value">1.0x</text>
+<text x="0" y="157" class="row-label">NoClip</text>
+<line x1="670.0" y1="152" x2="132.0" y2="152" class="connector"/>
+<circle cx="670.0" cy="152" r="5" fill="#a33a2f"/>
+<circle cx="132.0" cy="152" r="5" fill="#167a5a"/>
+<text x="670.0" y="170" text-anchor="middle" class="tick">W20</text>
+<text x="132.0" y="143" text-anchor="middle" class="tick">W3</text>
+<text x="690" y="156" class="value">6.7x</text>
+<text x="0" y="197" class="row-label">NoClip+Delay</text>
+<line x1="480.1" y1="192" x2="163.6" y2="192" class="connector"/>
+<circle cx="480.1" cy="192" r="5" fill="#a33a2f"/>
+<circle cx="163.6" cy="192" r="5" fill="#167a5a"/>
+<text x="480.1" y="210" text-anchor="middle" class="tick">W14</text>
+<text x="163.6" y="183" text-anchor="middle" class="tick">W4</text>
+<text x="690" y="196" class="value">3.5x</text>
+</svg></section>
+<section class="panel wide"><h2>Latency / Compiler-Time Tradeoff</h2><svg viewBox="0 0 1000 520" role="img" aria-label="Peak latency versus C2 compile time">
+<text x="0" y="18" class="svg-title">Peak Latency vs C2 Time</text>
+<text x="0" y="36" class="axis-note">lower-left is better; both axes log-scaled</text>
+<rect x="92" y="56" width="838" height="394" class="plot-bg"/>
+<line x1="92.0" y1="56" x2="92.0" y2="450" class="grid-line"/>
+<line x1="92" y1="56.0" x2="930" y2="56.0" class="grid-line"/>
+<line x1="301.5" y1="56" x2="301.5" y2="450" class="grid-line"/>
+<line x1="92" y1="154.5" x2="930" y2="154.5" class="grid-line"/>
+<line x1="511.0" y1="56" x2="511.0" y2="450" class="grid-line"/>
+<line x1="92" y1="253.0" x2="930" y2="253.0" class="grid-line"/>
+<line x1="720.5" y1="56" x2="720.5" y2="450" class="grid-line"/>
+<line x1="92" y1="351.5" x2="930" y2="351.5" class="grid-line"/>
+<line x1="930.0" y1="56" x2="930.0" y2="450" class="grid-line"/>
+<line x1="92" y1="450.0" x2="930" y2="450.0" class="grid-line"/>
+<circle cx="583.9" cy="244.3" r="7" fill="#a33a2f" stroke="#2b6cb0" stroke-width="2"/>
+<text x="597.9" y="252.3" text-anchor="start" class="point-label">B:default</text>
+<circle cx="132.5" cy="213.6" r="7" fill="#a33a2f" stroke="#6a737d" stroke-width="2"/>
+<text x="146.5" y="221.6" text-anchor="start" class="point-label">B:NoEA</text>
+<circle cx="930.0" cy="56.0" r="7" fill="#a33a2f" stroke="#b84a62" stroke-width="2"/>
+<text x="918.0" y="64.0" text-anchor="end" class="point-label">B:NoClip</text>
+<circle cx="821.4" cy="450.0" r="7" fill="#a33a2f" stroke="#6f52b5" stroke-width="2"/>
+<text x="809.4" y="440.0" text-anchor="end" class="point-label">B:NoClip+Delay</text>
+<circle cx="92.0" cy="245.6" r="7" fill="#167a5a" stroke="#2b6cb0" stroke-width="2"/>
+<text x="106.0" y="253.6" text-anchor="start" class="point-label">P:default</text>
+<circle cx="134.4" cy="214.0" r="7" fill="#167a5a" stroke="#6a737d" stroke-width="2"/>
+<text x="148.4" y="222.0" text-anchor="start" class="point-label">P:NoEA</text>
+<circle cx="252.9" cy="419.1" r="7" fill="#167a5a" stroke="#b84a62" stroke-width="2"/>
+<text x="266.9" y="427.1" text-anchor="start" class="point-label">P:NoClip</text>
+<circle cx="334.4" cy="450.0" r="7" fill="#167a5a" stroke="#6f52b5" stroke-width="2"/>
+<text x="348.4" y="440.0" text-anchor="start" class="point-label">P:NoClip+Delay</text>
+<line x1="92" y1="450" x2="930" y2="450" class="axis"/>
+<line x1="92" y1="56" x2="92" y2="450" class="axis"/>
+<text x="511.0" y="502" text-anchor="middle" class="axis-label">C2 compile time (s)</text>
+<text x="18" y="253.0" transform="rotate(-90 18 253.0)" text-anchor="middle" class="axis-label">peak latency (us/op)</text>
+<text x="92" y="478" class="tick">1.058s</text>
+<text x="930" y="478" text-anchor="end" class="tick">36.794s</text>
+<text x="80" y="450" text-anchor="end" class="tick">8.065</text>
+<text x="80" y="61" text-anchor="end" class="tick">7,581.102</text>
+</svg></section>
+<section class="panel wide"><h2>Warmup Convergence Snapshots</h2><p>Each sparkline shows W1-W5 plus the best observed peak point. The y-axis is log-scaled per row.</p><table><thead><tr><th>Run</th><th>Shape</th><th class="num">TTP</th><th class="num">Peak us/op</th><th class="num">Measured avg us/op</th></tr></thead><tbody>
+<tr><td>B:default</td><td><svg viewBox="0 0 250 48" class="spark" role="img" aria-label="B:default warmup curve"><rect x="0" y="0" width="250" height="48" class="spark-bg"/><polyline points="5.0,5.0 53.0,5.1 101.0,5.1 149.0,9.8 197.0,18.5 245.0,43.0" fill="none" stroke="#a33a2f" stroke-width="2"/><circle cx="5.0" cy="5.0" r="2.2" fill="#a33a2f"/><circle cx="53.0" cy="5.1" r="2.2" fill="#a33a2f"/><circle cx="101.0" cy="5.1" r="2.2" fill="#a33a2f"/><circle cx="149.0" cy="9.8" r="2.2" fill="#a33a2f"/><circle cx="197.0" cy="18.5" r="2.2" fill="#a33a2f"/><circle cx="245.0" cy="43.0" r="2.2" fill="#a33a2f"/></svg></td><td class="num">W6</td><td class="num">287.784</td><td class="num">288.210</td></tr>
+<tr><td>B:NoEA</td><td><svg viewBox="0 0 250 48" class="spark" role="img" aria-label="B:NoEA warmup curve"><rect x="0" y="0" width="250" height="48" class="spark-bg"/><polyline points="5.0,5.0 53.0,37.5 101.0,41.8 149.0,43.0 197.0,43.0 245.0,43.0" fill="none" stroke="#a33a2f" stroke-width="2"/><circle cx="5.0" cy="5.0" r="2.2" fill="#a33a2f"/><circle cx="53.0" cy="37.5" r="2.2" fill="#a33a2f"/><circle cx="101.0" cy="41.8" r="2.2" fill="#a33a2f"/><circle cx="149.0" cy="43.0" r="2.2" fill="#a33a2f"/><circle cx="197.0" cy="43.0" r="2.2" fill="#a33a2f"/><circle cx="245.0" cy="43.0" r="2.2" fill="#a33a2f"/></svg></td><td class="num">W4</td><td class="num">490.439</td><td class="num">491.849</td></tr>
+<tr><td>B:NoClip</td><td><svg viewBox="0 0 250 48" class="spark" role="img" aria-label="B:NoClip warmup curve"><rect x="0" y="0" width="250" height="48" class="spark-bg"/><polyline points="5.0,5.0 53.0,5.5 101.0,5.7 149.0,5.7 197.0,5.7 245.0,43.0" fill="none" stroke="#a33a2f" stroke-width="2"/><circle cx="5.0" cy="5.0" r="2.2" fill="#a33a2f"/><circle cx="53.0" cy="5.5" r="2.2" fill="#a33a2f"/><circle cx="101.0" cy="5.7" r="2.2" fill="#a33a2f"/><circle cx="149.0" cy="5.7" r="2.2" fill="#a33a2f"/><circle cx="197.0" cy="5.7" r="2.2" fill="#a33a2f"/><circle cx="245.0" cy="43.0" r="2.2" fill="#a33a2f"/></svg></td><td class="num">W20</td><td class="num">7,581.102</td><td class="num">7,595.440</td></tr>
+<tr><td>B:NoClip+Delay</td><td><svg viewBox="0 0 250 48" class="spark" role="img" aria-label="B:NoClip+Delay warmup curve"><rect x="0" y="0" width="250" height="48" class="spark-bg"/><polyline points="5.0,5.0 53.0,5.1 101.0,5.1 149.0,5.1 197.0,5.1 245.0,43.0" fill="none" stroke="#a33a2f" stroke-width="2"/><circle cx="5.0" cy="5.0" r="2.2" fill="#a33a2f"/><circle cx="53.0" cy="5.1" r="2.2" fill="#a33a2f"/><circle cx="101.0" cy="5.1" r="2.2" fill="#a33a2f"/><circle cx="149.0" cy="5.1" r="2.2" fill="#a33a2f"/><circle cx="197.0" cy="5.1" r="2.2" fill="#a33a2f"/><circle cx="245.0" cy="43.0" r="2.2" fill="#a33a2f"/></svg></td><td class="num">W14</td><td class="num">8.065</td><td class="num">8.070</td></tr>
+<tr><td>P:default</td><td><svg viewBox="0 0 250 48" class="spark" role="img" aria-label="P:default warmup curve"><rect x="0" y="0" width="250" height="48" class="spark-bg"/><polyline points="5.0,5.0 53.0,39.7 101.0,42.9 149.0,43.0 197.0,43.0 245.0,43.0" fill="none" stroke="#167a5a" stroke-width="2"/><circle cx="5.0" cy="5.0" r="2.2" fill="#167a5a"/><circle cx="53.0" cy="39.7" r="2.2" fill="#167a5a"/><circle cx="101.0" cy="42.9" r="2.2" fill="#167a5a"/><circle cx="149.0" cy="43.0" r="2.2" fill="#167a5a"/><circle cx="197.0" cy="43.0" r="2.2" fill="#167a5a"/><circle cx="245.0" cy="43.0" r="2.2" fill="#167a5a"/></svg></td><td class="num">W3</td><td class="num">281.214</td><td class="num">281.396</td></tr>
+<tr><td>P:NoEA</td><td><svg viewBox="0 0 250 48" class="spark" role="img" aria-label="P:NoEA warmup curve"><rect x="0" y="0" width="250" height="48" class="spark-bg"/><polyline points="5.0,5.0 53.0,37.7 101.0,40.9 149.0,43.0 197.0,42.9 245.0,43.0" fill="none" stroke="#167a5a" stroke-width="2"/><circle cx="5.0" cy="5.0" r="2.2" fill="#167a5a"/><circle cx="53.0" cy="37.7" r="2.2" fill="#167a5a"/><circle cx="101.0" cy="40.9" r="2.2" fill="#167a5a"/><circle cx="149.0" cy="43.0" r="2.2" fill="#167a5a"/><circle cx="197.0" cy="42.9" r="2.2" fill="#167a5a"/><circle cx="245.0" cy="43.0" r="2.2" fill="#167a5a"/></svg></td><td class="num">W4</td><td class="num">487.301</td><td class="num">490.084</td></tr>
+<tr><td>P:NoClip</td><td><svg viewBox="0 0 250 48" class="spark" role="img" aria-label="P:NoClip warmup curve"><rect x="0" y="0" width="250" height="48" class="spark-bg"/><polyline points="5.0,5.0 53.0,36.2 101.0,43.0 149.0,43.0 197.0,43.0 245.0,43.0" fill="none" stroke="#167a5a" stroke-width="2"/><circle cx="5.0" cy="5.0" r="2.2" fill="#167a5a"/><circle cx="53.0" cy="36.2" r="2.2" fill="#167a5a"/><circle cx="101.0" cy="43.0" r="2.2" fill="#167a5a"/><circle cx="149.0" cy="43.0" r="2.2" fill="#167a5a"/><circle cx="197.0" cy="43.0" r="2.2" fill="#167a5a"/><circle cx="245.0" cy="43.0" r="2.2" fill="#167a5a"/></svg></td><td class="num">W3</td><td class="num">13.806</td><td class="num">13.817</td></tr>
+<tr><td>P:NoClip+Delay</td><td><svg viewBox="0 0 250 48" class="spark" role="img" aria-label="P:NoClip+Delay warmup curve"><rect x="0" y="0" width="250" height="48" class="spark-bg"/><polyline points="5.0,5.0 53.0,6.6 101.0,42.2 149.0,43.0 197.0,43.0 245.0,43.0" fill="none" stroke="#167a5a" stroke-width="2"/><circle cx="5.0" cy="5.0" r="2.2" fill="#167a5a"/><circle cx="53.0" cy="6.6" r="2.2" fill="#167a5a"/><circle cx="101.0" cy="42.2" r="2.2" fill="#167a5a"/><circle cx="149.0" cy="43.0" r="2.2" fill="#167a5a"/><circle cx="197.0" cy="43.0" r="2.2" fill="#167a5a"/><circle cx="245.0" cy="43.0" r="2.2" fill="#167a5a"/></svg></td><td class="num">W4</td><td class="num">8.066</td><td class="num">8.069</td></tr>
+</tbody></table></section>
+<section class="panel wide"><h2>Main Numbers</h2><table><thead><tr><th>Run</th><th class="num">Peak us/op</th><th>Iter</th><th class="num">TTP</th><th class="num">Measured avg us/op</th><th class="num">C2 s</th><th class="num">C2 bytes/s</th></tr></thead><tbody>
+<tr><td>B:default</td><td class="num">287.784</td><td>W13</td><td class="num">W6</td><td class="num">288.210</td><td class="num">8.495</td><td class="num">25,335.259</td></tr>
+<tr><td>B:NoEA</td><td class="num">490.439</td><td>W4</td><td class="num">W4</td><td class="num">491.849</td><td class="num">1.256</td><td class="num">172,957.027</td></tr>
+<tr><td>B:NoClip</td><td class="num">7,581.102</td><td>M1</td><td class="num">W20</td><td class="num">7,595.440</td><td class="num">36.794</td><td class="num">3,494.572</td></tr>
+<tr><td>B:NoClip+Delay</td><td class="num">8.065</td><td>M3</td><td class="num">W14</td><td class="num">8.070</td><td class="num">23.230</td><td class="num">9,470.282</td></tr>
+<tr><td>P:default</td><td class="num">281.214</td><td>M2</td><td class="num">W3</td><td class="num">281.396</td><td class="num">1.058</td><td class="num">209,157.597</td></tr>
+<tr><td>P:NoEA</td><td class="num">487.301</td><td>M1</td><td class="num">W4</td><td class="num">490.084</td><td class="num">1.266</td><td class="num">175,814.158</td></tr>
+<tr><td>P:NoClip</td><td class="num">13.806</td><td>W8</td><td class="num">W3</td><td class="num">13.817</td><td class="num">2.091</td><td class="num">109,250.454</td></tr>
+<tr><td>P:NoClip+Delay</td><td class="num">8.066</td><td>M3</td><td class="num">W4</td><td class="num">8.069</td><td class="num">2.953</td><td class="num">77,247.426</td></tr>
+</tbody></table></section>
+<section class="panel wide"><h2>Baseline vs Patched</h2><table><thead><tr><th>Scenario</th><th class="num">Base peak</th><th class="num">Patched peak</th><th class="num">Peak delta</th><th class="num">Base TTP</th><th class="num">Patched TTP</th><th class="num">Base C2</th><th class="num">Patched C2</th><th class="num">C2 time</th><th class="num">C2 speed</th></tr></thead><tbody>
+<tr><td>default</td><td class="num">287.784</td><td class="num">281.214</td><td class="num">-2.3%</td><td class="num">W6</td><td class="num">W3</td><td class="num">8.495</td><td class="num">1.058</td><td class="num">8.0x</td><td class="num">8.3x</td></tr>
+<tr><td>NoEA</td><td class="num">490.439</td><td class="num">487.301</td><td class="num">-0.6%</td><td class="num">W4</td><td class="num">W4</td><td class="num">1.256</td><td class="num">1.266</td><td class="num">neutral</td><td class="num">neutral</td></tr>
+<tr><td>NoClip</td><td class="num">7,581.102</td><td class="num">13.806</td><td class="num">-99.8%</td><td class="num">W20</td><td class="num">W3</td><td class="num">36.794</td><td class="num">2.091</td><td class="num">17.6x</td><td class="num">31.3x</td></tr>
+<tr><td>NoClip+Delay</td><td class="num">8.065</td><td class="num">8.066</td><td class="num">+0.0%</td><td class="num">W14</td><td class="num">W4</td><td class="num">23.230</td><td class="num">2.953</td><td class="num">7.9x</td><td class="num">8.2x</td></tr>
+</tbody></table></section>
+<section class="panel wide"><h2>Run Legend</h2><table class="legend"><thead><tr><th>ID</th><th>JDK</th><th>Scenario</th><th>Differing JVM args</th><th>Source file</th></tr></thead><tbody>
+<tr><td>B:default</td><td>baseline</td><td>default</td><td><code>default EA/inlining policy</code></td><td><code>JDK 27-ea+25 BASELINE.txt</code></td></tr>
+<tr><td>B:NoEA</td><td>baseline</td><td>NoEA</td><td><code>-XX:-DoEscapeAnalysis</code></td><td><code>JDK 27-ea+25 BASELINE NoEA.txt</code></td></tr>
+<tr><td>B:NoClip</td><td>baseline</td><td>NoClip</td><td><code>-XX:-ClipInlining</code></td><td><code>JDK 27-ea+25 BASELINE NoClip.txt</code></td></tr>
+<tr><td>B:NoClip+Delay</td><td>baseline</td><td>NoClip+Delay</td><td><code>-XX:-ClipInlining -XX:+DelayAfterInliningCutoff</code></td><td><code>JDK 27-ea+25 BASELINE NoClipDelay.txt</code></td></tr>
+<tr><td>P:default</td><td>patched</td><td>default</td><td><code>default EA/inlining policy</code></td><td><code>JDK 27-ea+25 PATCHED.txt</code></td></tr>
+<tr><td>P:NoEA</td><td>patched</td><td>NoEA</td><td><code>-XX:-DoEscapeAnalysis</code></td><td><code>JDK 27-ea+25 PATCHED NoEA.txt</code></td></tr>
+<tr><td>P:NoClip</td><td>patched</td><td>NoClip</td><td><code>-XX:-ClipInlining</code></td><td><code>JDK 27-ea+25 PATCHED NoClip.txt</code></td></tr>
+<tr><td>P:NoClip+Delay</td><td>patched</td><td>NoClip+Delay</td><td><code>-XX:-ClipInlining -XX:+DelayAfterInliningCutoff</code></td><td><code>JDK 27-ea+25 PATCHED NoClipDelay.txt</code></td></tr>
+</tbody></table></section></div></body></html>
